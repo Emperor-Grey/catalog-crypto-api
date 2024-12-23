@@ -35,6 +35,8 @@ sqlx = { version = "0.8.2", features = [
     "tls-native-tls",
     "runtime-tokio",
     "mysql",
+    "chrono",
+    "time",
 ] }
 prkorm = "0.5.4"
 

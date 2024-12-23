@@ -1,7 +1,9 @@
 use chrono::{DateTime, TimeZone, Utc};
+use prkorm::Table;
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
 mod float_serialization {
     use super::*;
@@ -89,7 +91,8 @@ mod u32_serialization {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[table_name("`intervals`")]
 pub struct DepthInterval {
     #[serde(rename = "assetDepth", with = "u64_serialization")]
     pub asset_depth: u64,
@@ -117,7 +120,7 @@ pub struct DepthInterval {
     pub units: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct MetaStats {
     #[serde(rename = "endAssetDepth", with = "u64_serialization")]
     pub end_asset_depth: u64,
@@ -157,14 +160,14 @@ pub struct DepthHistoryParams {
     pub to: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct DepthHistoryResponse {
     pub intervals: Vec<DepthInterval>,
     #[serde(rename = "meta")]
     pub meta_stats: MetaStats,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum Interval {
     #[serde(rename = "5min")]
