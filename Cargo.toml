@@ -1,0 +1,43 @@
+[package]
+name = "catalog-crypto-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Normal utilities
+http = "1.2.0"
+dotenv = "0.15.0"
+
+# Deserialization and serialization
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = "1.0"
+
+# DateTime handling
+chrono = { version = "0.4", features = ["serde"] }
+
+
+# For the api building and stuff
+axum = { version = "0.7.9", features = ["macros"] }
+url = "2.5.4"
+tokio = { version = "1.42.0", features = ["full"] }
+tower-http = { features = ["fs", "trace", "cors"], version = "0.6.2" }
+
+# For logging and stuff
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+# For the api
+reqwest = { version = "0.12.9", features = ["json", "blocking"] }
+# Now for the database
+sqlx = { version = "0.8.2", features = [
+    "runtime-tokio-rustls",
+    "any",
+    "tls-native-tls",
+    "runtime-tokio",
+    "mysql",
+] }
+prkorm = "0.5.4"
+
+# For error handling
+anyhow = "1.0.95"
+thiserror = "2.0.9"
