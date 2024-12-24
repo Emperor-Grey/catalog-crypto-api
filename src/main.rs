@@ -1,13 +1,17 @@
+#![allow(unused)]
+
 use axum::{routing::get, Router};
 use chrono::Utc;
 use config::connect;
 use dotenv::dotenv;
+use handlers::{depth_history::get_depth_history, earning_history::get_earnings_history};
 use http::Method;
 use model::{
-    depth_history::{DepthHistoryParams, DepthHistoryResponse, Interval},
-    earnings_history::{self, EarningsHistoryParams, EarningsHistoryResponse},
-    runepool_units_history::{self, RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
-    swap_history::{self, SwapHistoryParams, SwapHistoryResponse},
+    common::Interval,
+    depth_history::{DepthHistoryParams, DepthHistoryResponse},
+    earnings_history::{EarningsHistoryParams, EarningsHistoryResponse},
+    runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
+    swap_history::{SwapHistoryParams, SwapHistoryResponse},
 };
 use reqwest::Client;
 use std::env;
@@ -22,7 +26,9 @@ mod model;
 mod services;
 
 /* ************************************************************ */
+/* ************************************************************ */
 // !NOTE: PLEASE FETCH THINGS ONE BY ONE BECAUSE OF RATE LIMITS
+/* ************************************************************ */
 /* ************************************************************ */
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
 async fn main() {
@@ -38,7 +44,7 @@ async fn main() {
     tracing::info!("Connected to database...");
     println!("Current Utc TimeStamp: {:?}", Utc::now().timestamp());
 
-    // !NOTE: Uncomment this if you want to fetch initial data and read the comment above the main first
+    // !NOTE: Uncomment this if you want to fetch initial data and read the comment above the main
     // spawn_cron_jobs(pool.clone());
     // fetch_initial_data(pool.clone()).await;
 
@@ -177,6 +183,8 @@ async fn start_server(pool: sqlx::MySqlPool) {
             Method::DELETE,
         ]))
         .route("/", get(root))
+        .route("/depth_history", get(get_depth_history))
+        .route("/earning_history", get(get_earnings_history))
         .with_state(pool);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -248,7 +256,7 @@ async fn fetch_initial_earnings_history() -> Result<EarningsHistoryResponse, req
     let client = Client::new();
 
     let params = EarningsHistoryParams {
-        interval: Some(earnings_history::Interval::Hour),
+        interval: Some(Interval::Hour),
         count: Some(400),
         from: None,
         to: Some(Utc::now()),
@@ -261,13 +269,13 @@ async fn fetch_initial_earnings_history() -> Result<EarningsHistoryResponse, req
         url.query_pairs_mut().append_pair(
             "interval",
             match interval {
-                earnings_history::Interval::FiveMin => "5min",
-                earnings_history::Interval::Hour => "hour",
-                earnings_history::Interval::Day => "day",
-                earnings_history::Interval::Week => "week",
-                earnings_history::Interval::Month => "month",
-                earnings_history::Interval::Quarter => "quarter",
-                earnings_history::Interval::Year => "year",
+                Interval::FiveMin => "5min",
+                Interval::Hour => "hour",
+                Interval::Day => "day",
+                Interval::Week => "week",
+                Interval::Month => "month",
+                Interval::Quarter => "quarter",
+                Interval::Year => "year",
             },
         );
     }
@@ -297,7 +305,7 @@ async fn fetch_initial_swap_history() -> Result<SwapHistoryResponse, reqwest::Er
     let client = Client::new();
 
     let params = SwapHistoryParams {
-        interval: Some(swap_history::Interval::Hour),
+        interval: Some(Interval::Hour),
         count: Some(400),
         from: None,
         to: Some(Utc::now()),
@@ -310,13 +318,13 @@ async fn fetch_initial_swap_history() -> Result<SwapHistoryResponse, reqwest::Er
         url.query_pairs_mut().append_pair(
             "interval",
             match interval {
-                swap_history::Interval::FiveMin => "5min",
-                swap_history::Interval::Hour => "hour",
-                swap_history::Interval::Day => "day",
-                swap_history::Interval::Week => "week",
-                swap_history::Interval::Month => "month",
-                swap_history::Interval::Quarter => "quarter",
-                swap_history::Interval::Year => "year",
+                Interval::FiveMin => "5min",
+                Interval::Hour => "hour",
+                Interval::Day => "day",
+                Interval::Week => "week",
+                Interval::Month => "month",
+                Interval::Quarter => "quarter",
+                Interval::Year => "year",
             },
         );
     }
@@ -347,7 +355,7 @@ async fn fetch_initial_runepool_units_history(
     let client = Client::new();
 
     let params = RunepoolUnitsHistoryParams {
-        interval: Some(runepool_units_history::Interval::Hour),
+        interval: Some(Interval::Hour),
         count: Some(400),
         from: None,
         to: Some(Utc::now()),
@@ -360,13 +368,13 @@ async fn fetch_initial_runepool_units_history(
         url.query_pairs_mut().append_pair(
             "interval",
             match interval {
-                runepool_units_history::Interval::FiveMin => "5min",
-                runepool_units_history::Interval::Hour => "hour",
-                runepool_units_history::Interval::Day => "day",
-                runepool_units_history::Interval::Week => "week",
-                runepool_units_history::Interval::Month => "month",
-                runepool_units_history::Interval::Quarter => "quarter",
-                runepool_units_history::Interval::Year => "year",
+                Interval::FiveMin => "5min",
+                Interval::Hour => "hour",
+                Interval::Day => "day",
+                Interval::Week => "week",
+                Interval::Month => "month",
+                Interval::Quarter => "quarter",
+                Interval::Year => "year",
             },
         );
     }

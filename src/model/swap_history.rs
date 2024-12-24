@@ -3,6 +3,8 @@ use prkorm::Table;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
+use super::common::Interval;
+
 mod float_serialization {
     use serde::{de::Deserializer, ser::Serializer, Deserialize};
 
@@ -167,31 +169,4 @@ pub struct SwapHistoryParams {
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum Interval {
-    #[serde(rename = "5min")]
-    FiveMin,
-    Hour,
-    Day,
-    Week,
-    Month,
-    Quarter,
-    Year,
-}
-
-impl std::fmt::Display for Interval {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Interval::FiveMin => write!(f, "5min"),
-            Interval::Hour => write!(f, "hour"),
-            Interval::Day => write!(f, "day"),
-            Interval::Week => write!(f, "week"),
-            Interval::Month => write!(f, "month"),
-            Interval::Quarter => write!(f, "quarter"),
-            Interval::Year => write!(f, "year"),
-        }
-    }
 }

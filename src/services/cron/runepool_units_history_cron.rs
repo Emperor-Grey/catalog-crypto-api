@@ -1,14 +1,12 @@
+use crate::model::common::Interval;
+use crate::{
+    model::runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
+    services::runepool_units_history,
+};
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
 use tracing::{error, info};
-
-use crate::{
-    model::runepool_units_history::{
-        Interval, RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse,
-    },
-    services::runepool_units_history,
-};
 
 pub struct RunepoolUnitsHistoryCron {
     pool: MySqlPool,

@@ -10,6 +10,7 @@ CREATE TABLE `earning_intervals` (
     liquidity_earnings BIGINT UNSIGNED NOT NULL,
     liquidity_fees BIGINT UNSIGNED NOT NULL,
     rune_price_usd DOUBLE NOT NULL,
+    pools JSON NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_earnings_time_range (start_time, end_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

@@ -4,7 +4,10 @@ use tokio::time;
 use tracing::{error, info};
 
 use crate::{
-    model::swap_history::{Interval, SwapHistoryParams, SwapHistoryResponse},
+    model::{
+        common::Interval,
+        swap_history::{SwapHistoryParams, SwapHistoryResponse},
+    },
     services::swap_history,
 };
 

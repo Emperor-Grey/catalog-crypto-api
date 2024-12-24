@@ -1,12 +1,12 @@
+use crate::model::common::Interval;
+use crate::{
+    model::earnings_history::{EarningsHistoryParams, EarningsHistoryResponse},
+    services::earnings_history::store_intervals,
+};
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
 use tracing::{error, info};
-
-use crate::{
-    model::earnings_history::{EarningsHistoryParams, EarningsHistoryResponse, Interval},
-    services::earnings_history::store_intervals,
-};
 
 pub struct EarningsHistoryCron {
     pool: MySqlPool,

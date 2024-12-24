@@ -3,6 +3,8 @@ use prkorm::Table;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
+use super::common::Interval;
+
 mod float_serialization {
     use serde::{de::Deserializer, ser::Serializer, Deserialize};
 
@@ -164,48 +166,4 @@ pub struct DepthHistoryParams {
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum Interval {
-    #[serde(rename = "5min")]
-    FiveMin,
-    Hour,
-    Day,
-    Week,
-    Month,
-    Quarter,
-    Year,
-}
-
-impl std::fmt::Display for Interval {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Interval::FiveMin => write!(f, "5min"),
-            Interval::Hour => write!(f, "hour"),
-            Interval::Day => write!(f, "day"),
-            Interval::Week => write!(f, "week"),
-            Interval::Month => write!(f, "month"),
-            Interval::Quarter => write!(f, "quarter"),
-            Interval::Year => write!(f, "year"),
-        }
-    }
-}
-
-impl TryFrom<String> for Interval {
-    type Error = String;
-
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        match s.to_lowercase().as_str() {
-            "five_min" => Ok(Interval::FiveMin),
-            "hour" => Ok(Interval::Hour),
-            "day" => Ok(Interval::Day),
-            "week" => Ok(Interval::Week),
-            "month" => Ok(Interval::Month),
-            "quarter" => Ok(Interval::Quarter),
-            "year" => Ok(Interval::Year),
-            _ => Err("Invalid interval".to_string()),
-        }
-    }
 }

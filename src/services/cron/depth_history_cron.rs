@@ -1,10 +1,11 @@
+use crate::model::common::Interval;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
 use tracing::{error, info};
 
 use crate::{
-    model::depth_history::{DepthHistoryParams, DepthHistoryResponse, Interval},
+    model::depth_history::{DepthHistoryParams, DepthHistoryResponse},
     services::depth_history::store_intervals,
 };
 
