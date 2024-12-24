@@ -105,6 +105,7 @@ pub struct Pool {
 #[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
 #[table_name("`earning_intervals`")]
 #[serde(rename_all = "camelCase")]
+#[derive(sqlx::Type)]
 pub struct IntervalData {
     #[serde(rename = "avgNodeCount", with = "float_serialization")]
     pub avg_node_count: f64,
