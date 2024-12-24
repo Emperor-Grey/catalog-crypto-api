@@ -1,12 +1,10 @@
 use chrono::{DateTime, TimeZone, Utc};
 use prkorm::Table;
-use serde::de::Deserializer;
-use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
 mod float_serialization {
-    use super::*;
+    use serde::{de::Deserializer, ser::Serializer, Deserialize};
 
     pub fn serialize<S>(value: &f64, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -29,6 +27,7 @@ mod float_serialization {
 
 mod timestamp_serialization {
     use super::*;
+    use serde::{Deserializer, Serializer};
 
     pub fn serialize<S>(date: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -50,9 +49,7 @@ mod timestamp_serialization {
 }
 
 mod u64_serialization {
-    use serde::de;
-
-    use super::*;
+    use serde::{de, Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -66,14 +63,16 @@ mod u64_serialization {
         D: Deserializer<'de>,
     {
         let value_str = String::deserialize(deserializer)?;
-        value_str.parse::<u64>().map_err(de::Error::custom)
+        value_str
+            .trim()
+            .replace(",", "")
+            .parse::<u64>()
+            .map_err(de::Error::custom)
     }
 }
 
 mod u32_serialization {
-    use serde::de;
-
-    use super::*;
+    use serde::{de, Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(value: &u32, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -92,7 +91,7 @@ mod u32_serialization {
 }
 
 #[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
-#[table_name("`intervals`")]
+#[table_name("`depth_intervals`")]
 pub struct DepthInterval {
     #[serde(rename = "assetDepth", with = "u64_serialization")]
     pub asset_depth: u64,
@@ -120,7 +119,7 @@ pub struct DepthInterval {
     pub units: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MetaStats {
     #[serde(rename = "endAssetDepth", with = "u64_serialization")]
     pub end_asset_depth: u64,
@@ -153,18 +152,18 @@ pub struct MetaStats {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct DepthHistoryResponse {
+    pub intervals: Vec<DepthInterval>,
+    #[serde(rename = "meta")]
+    pub meta_stats: MetaStats,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DepthHistoryParams {
     pub interval: Option<Interval>,
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct DepthHistoryResponse {
-    pub intervals: Vec<DepthInterval>,
-    #[serde(rename = "meta")]
-    pub meta_stats: MetaStats,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -178,6 +177,20 @@ pub enum Interval {
     Month,
     Quarter,
     Year,
+}
+
+impl std::fmt::Display for Interval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Interval::FiveMin => write!(f, "5min"),
+            Interval::Hour => write!(f, "hour"),
+            Interval::Day => write!(f, "day"),
+            Interval::Week => write!(f, "week"),
+            Interval::Month => write!(f, "month"),
+            Interval::Quarter => write!(f, "quarter"),
+            Interval::Year => write!(f, "year"),
+        }
+    }
 }
 
 impl TryFrom<String> for Interval {

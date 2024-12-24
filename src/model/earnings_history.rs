@@ -1,5 +1,7 @@
 use chrono::{DateTime, TimeZone, Utc};
+use prkorm::Table;
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
 mod float_serialization {
     use serde::{de::Deserializer, ser::Serializer, Deserialize};
@@ -19,7 +21,14 @@ mod float_serialization {
         if value_str == "NaN" {
             return Ok(f64::NAN);
         }
-        value_str.parse::<f64>().map_err(serde::de::Error::custom)
+        match value_str.parse::<f64>() {
+            Ok(num) => Ok(num),
+            Err(_) => value_str
+                .trim()
+                .replace(",", "")
+                .parse::<f64>()
+                .map_err(serde::de::Error::custom),
+        }
     }
 }
 
@@ -62,30 +71,18 @@ mod u64_serialization {
         D: Deserializer<'de>,
     {
         let value_str = String::deserialize(deserializer)?;
-        value_str.parse::<u64>().map_err(de::Error::custom)
+        if let Ok(float_val) = value_str.trim().replace(",", "").parse::<f64>() {
+            return Ok(float_val as u64);
+        }
+        value_str
+            .trim()
+            .replace(",", "")
+            .parse::<u64>()
+            .map_err(de::Error::custom)
     }
 }
 
-mod u32_serialization {
-    use serde::{de, Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<S>(value: &u32, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&value.to_string())
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<u32, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value_str = String::deserialize(deserializer)?;
-        value_str.parse::<u32>().map_err(de::Error::custom)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Pool {
     #[serde(rename = "assetLiquidityFees", with = "u64_serialization")]
     pub asset_liquidity_fees: u64,
@@ -102,7 +99,8 @@ pub struct Pool {
     pub total_liquidity_fees_rune: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[table_name("`earning_intervals`")]
 pub struct IntervalData {
     #[serde(rename = "avgNodeCount", with = "float_serialization")]
     pub avg_node_count: f64,
@@ -147,15 +145,59 @@ pub struct MetaStats {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DepthHistoryResponse {
+pub struct EarningsHistoryResponse {
     pub intervals: Vec<IntervalData>,
     #[serde(rename = "meta")]
     pub meta_stats: MetaStats,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum Interval {
+    #[serde(rename = "5min")]
+    FiveMin,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Quarter,
+    Year,
+}
+
+impl std::fmt::Display for Interval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Interval::FiveMin => write!(f, "5min"),
+            Interval::Hour => write!(f, "hour"),
+            Interval::Day => write!(f, "day"),
+            Interval::Week => write!(f, "week"),
+            Interval::Month => write!(f, "month"),
+            Interval::Quarter => write!(f, "quarter"),
+            Interval::Year => write!(f, "year"),
+        }
+    }
+}
+
+impl TryFrom<String> for Interval {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_str() {
+            "five_min" => Ok(Interval::FiveMin),
+            "hour" => Ok(Interval::Hour),
+            "day" => Ok(Interval::Day),
+            "week" => Ok(Interval::Week),
+            "month" => Ok(Interval::Month),
+            "quarter" => Ok(Interval::Quarter),
+            "year" => Ok(Interval::Year),
+            _ => Err("Invalid interval".to_string()),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DepthHistoryParams {
-    pub interval: Option<String>,
+pub struct EarningsHistoryParams {
+    pub interval: Option<Interval>,
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,

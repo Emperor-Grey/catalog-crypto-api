@@ -15,7 +15,6 @@ serde_json = "1.0"
 # DateTime handling
 chrono = { version = "0.4", features = ["serde"] }
 
-
 # For the api building and stuff
 axum = { version = "0.7.9", features = ["macros"] }
 url = "2.5.4"
@@ -28,6 +27,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 # For the api
 reqwest = { version = "0.12.9", features = ["json", "blocking"] }
+
 # Now for the database
 sqlx = { version = "0.8.2", features = [
     "runtime-tokio-rustls",
@@ -40,6 +40,66 @@ sqlx = { version = "0.8.2", features = [
 ] }
 prkorm = "0.5.4"
 
-# For error handling
+# For error handling but not used to thiserror don't ask me why i'am using it
 anyhow = "1.0.95"
 thiserror = "2.0.9"
+
+# TODO Make this folder structure in future after everything is working
+
+# catalog-crypto-api/
+# ├── .env
+# ├── .gitignore
+# ├── Cargo.toml
+# ├── README.md
+# └── src/
+#     ├── main.rs
+#     ├── config/
+#     │   ├── mod.rs
+#     │   ├── database.rs
+#     │   └── app.rs
+#     ├── api/
+#     │   ├── mod.rs
+#     │   ├── routes/
+#     │   │   ├── mod.rs
+#     │   │   ├── depth.rs
+#     │   │   ├── earnings.rs
+#     │   │   ├── runepool.rs
+#     │   │   └── swap.rs
+#     │   └── middleware/
+#     │       ├── mod.rs
+#     │       └── cors.rs
+#     ├── core/
+#     │   ├── mod.rs
+#     │   ├── models/
+#     │   │   ├── mod.rs
+#     │   │   ├── common/
+#     │   │   │   ├── mod.rs
+#     │   │   │   ├── interval.rs
+#     │   │   │   └── serialization.rs
+#     │   │   ├── depth.rs
+#     │   │   ├── earnings.rs
+#     │   │   ├── runepool.rs
+#     │   │   └── swap.rs
+#     │   └── error.rs
+#     ├── services/
+#     │   ├── mod.rs
+#     │   ├── clients/
+#     │   │   ├── mod.rs
+#     │   │   └── midgard.rs
+#     │   ├── repository/
+#     │   │   ├── mod.rs
+#     │   │   ├── depth.rs
+#     │   │   ├── earnings.rs
+#     │   │   ├── runepool.rs
+#     │   │   └── swap.rs
+#     │   └── jobs/
+#     │       ├── mod.rs
+#     │       └── cron/
+#     │           ├── mod.rs
+#     │           ├── depth.rs
+#     │           ├── earnings.rs
+#     │           ├── runepool.rs
+#     │           └── swap.rs
+#     └── utils/
+#         ├── mod.rs
+#         └── time.rs

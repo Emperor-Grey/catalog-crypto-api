@@ -8,7 +8,7 @@ pub async fn store_intervals(
     for interval in intervals {
         sqlx::query!(
             r#"
-            INSERT INTO intervals (
+            INSERT INTO `depth_intervals` (
                 start_time, end_time, asset_depth, asset_price, 
                 asset_price_usd, liquidity_units, luvi, members_count,
                 rune_depth, synth_supply, synth_units, units
