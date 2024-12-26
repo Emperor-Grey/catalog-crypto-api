@@ -13,7 +13,7 @@ use crate::core::models::{
 #[openapi(
     info(
         title = "Crypto History API",
-        version = "1.0.0",
+        version = "1.0.1",
         description = "A comprehensive REST API for fetching and managing historical cryptocurrency data from the THORChain network (midgard).
 
     Features include:
