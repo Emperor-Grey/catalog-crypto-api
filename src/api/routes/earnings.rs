@@ -1,3 +1,5 @@
+use crate::core::models::common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
+use crate::core::models::earnings_history::{EarningsHistoryQueryParams, Pool};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::{
@@ -5,19 +7,13 @@ use axum::{
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::json;
 use serde_json::Value as JsonValue;
 use sqlx::prelude::FromRow;
 use sqlx::MySqlPool;
 use tracing::{debug, error, info};
 use utoipa::ToSchema;
-
-use crate::model::earnings_history::EarningsHistoryQueryParams;
-use crate::model::{
-    common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE},
-    earnings_history::Pool,
-};
 
 // !Just cuz in the models, we have intervalData which contains Vec<Pool> and rust don't know how to deserialize it
 // !So we need to create a new struct to deserialize it (Only solution i found)

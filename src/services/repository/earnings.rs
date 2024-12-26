@@ -1,4 +1,5 @@
-use crate::model::earnings_history::IntervalData;
+use crate::core::models::earnings_history::IntervalData;
+use serde_json;
 use sqlx::MySqlPool;
 
 pub async fn store_intervals(

@@ -1,22 +1,20 @@
-use crate::get_midgard_api_url;
-use crate::model::common::Interval;
-use crate::{
-    model::runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
-    services::runepool_units_history,
-};
+use crate::core::models::common::Interval;
+use crate::core::models::earnings_history::{EarningsHistoryParams, EarningsHistoryResponse};
+use crate::services::client::get_midgard_api_url;
+use crate::services::repository::earnings::store_intervals;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
 use tracing::{error, info};
 
-pub struct RunepoolUnitsHistoryCron {
+pub struct EarningsHistoryCron {
     pool: MySqlPool,
     interval: Interval,
     count: u32,
     last_fetch_time: Option<DateTime<Utc>>,
 }
 
-impl RunepoolUnitsHistoryCron {
+impl EarningsHistoryCron {
     pub fn new(pool: MySqlPool) -> Self {
         Self {
             pool,
@@ -29,7 +27,7 @@ impl RunepoolUnitsHistoryCron {
     pub async fn start(&mut self) -> Result<(), anyhow::Error> {
         loop {
             if let Err(e) = self.fetch_and_store().await {
-                error!("Failed to fetch and store runepool units history: {}", e);
+                error!("Failed to fetch and store earnings history: {}", e);
                 time::sleep(Duration::seconds(3).to_std().unwrap()).await;
                 continue;
             }
@@ -37,11 +35,12 @@ impl RunepoolUnitsHistoryCron {
             time::sleep(Duration::seconds(3).to_std().unwrap()).await;
         }
     }
+
     async fn fetch_and_store(&mut self) -> Result<(), anyhow::Error> {
         let client = reqwest::Client::new();
 
         loop {
-            let params = RunepoolUnitsHistoryParams {
+            let params = EarningsHistoryParams {
                 interval: Some(self.interval.clone()),
                 count: Some(self.count),
                 from: self.last_fetch_time,
@@ -49,7 +48,7 @@ impl RunepoolUnitsHistoryCron {
             };
 
             let base_url = get_midgard_api_url();
-            let mut url = reqwest::Url::parse(&format!("{}/history/runepool", base_url))?;
+            let mut url = reqwest::Url::parse(&format!("{}/history/earnings", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()
@@ -70,29 +69,26 @@ impl RunepoolUnitsHistoryCron {
                 Ok(response) => {
                     let response_text = response.text().await?;
 
+                    // Check if we got rate limited
                     if response_text.contains("slow down") {
                         tracing::warn!("Rate limited, waiting for 5 seconds before retry...");
                         time::sleep(Duration::seconds(5).to_std().unwrap()).await;
                         continue;
                     }
 
-                    match serde_json::from_str::<RunepoolUnitsHistoryResponse>(&response_text) {
-                        Ok(runepool_history) => {
-                            runepool_units_history::store_intervals(
-                                &self.pool,
-                                &runepool_history.intervals,
-                            )
-                            .await?;
+                    match serde_json::from_str::<EarningsHistoryResponse>(&response_text) {
+                        Ok(earnings_history) => {
+                            store_intervals(&self.pool, &earnings_history.intervals).await?;
 
                             info!(
                                 "Successfully stored {} intervals",
-                                runepool_history.intervals.len()
+                                earnings_history.intervals.len()
                             );
 
-                            if let Some(last_interval) = runepool_history.intervals.last() {
+                            if let Some(last_interval) = earnings_history.intervals.last() {
                                 self.last_fetch_time = Some(last_interval.end_time);
                                 info!(
-                                    "Successfully updated runepool units history. URL: {} Last fetch time: {}",
+                                    "Successfully updated earnings history. URL: {} Last fetch time: {}",
                                     url, last_interval.end_time
                                 );
                             }

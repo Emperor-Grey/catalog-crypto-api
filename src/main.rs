@@ -1,22 +1,21 @@
 #![allow(unused)]
 
+use api::routes::depth::get_depth_history;
+use api::routes::earnings::get_earnings_history;
+use api::routes::runepool::get_runepool_units_history;
+use api::routes::swap::get_swap_history;
 use axum::{routing::get, Router};
 use chrono::Utc;
 use config::connect;
+use core::models::depth_history::DepthHistoryParams;
+use core::models::earnings_history::EarningsHistoryParams;
+use core::models::runepool_units_history::RunepoolUnitsHistoryParams;
+use core::models::swap_history::SwapHistoryParams;
 use dotenv::dotenv;
-use handlers::{
-    depth_history::get_depth_history, earning_history::get_earnings_history,
-    runepool_unit_history::get_runepool_units_history, swap_history::get_swap_history,
-};
 use http::Method;
-use model::{
-    common::Interval,
-    depth_history::{DepthHistoryParams, DepthHistoryResponse},
-    earnings_history::{EarningsHistoryParams, EarningsHistoryResponse},
-    runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
-    swap_history::{SwapHistoryParams, SwapHistoryResponse},
-};
 use reqwest::Client;
+use services::client::get_midgard_api_url;
+use services::repository::{depth, earnings, runepool, swap};
 use std::env;
 use std::net::SocketAddr;
 use swagger::SwaggerApiDoc;
@@ -26,10 +25,21 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::core::models::{
+    common::Interval, depth_history::DepthHistoryResponse,
+    earnings_history::EarningsHistoryResponse,
+    runepool_units_history::RunepoolUnitsHistoryResponse, swap_history::SwapHistoryResponse,
+};
+use crate::services::jobs::cron::{
+    depth_history_cron::DepthHistoryCron, earnings_history_cron::EarningsHistoryCron,
+    runepool_units_history_cron::RunepoolUnitsHistoryCron, swap_history_cron::SwapHistoryCron,
+};
+
+mod api;
 mod config;
-mod handlers;
-mod model;
+mod core;
 mod services;
+
 mod swagger;
 
 /* ************************************************************ */
@@ -42,8 +52,8 @@ async fn main() {
     dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("Database url issue");
-    // println!("The fetching url is {}", get_midgard_api_url());
-    // println!("The database url is {}", database_url);
+    println!("The fetching url is {}", get_midgard_api_url());
+    println!("The database url is {}", database_url);
 
     let pool = connect::connect_database(&database_url)
         .await
@@ -74,7 +84,7 @@ fn setup_tracing() {
 fn spawn_cron_jobs(pool: sqlx::MySqlPool) {
     let depth_pool = pool.clone();
     tokio::spawn(async move {
-        let mut depth_cron = services::cron::DepthHistoryCron::new(depth_pool);
+        let mut depth_cron = DepthHistoryCron::new(depth_pool);
         if let Err(e) = depth_cron.start().await {
             tracing::error!("Depth history cron failed: {}", e);
         }
@@ -82,7 +92,7 @@ fn spawn_cron_jobs(pool: sqlx::MySqlPool) {
 
     let earnings_pool = pool.clone();
     tokio::spawn(async move {
-        let mut earnings_cron = services::cron::EarningsHistoryCron::new(earnings_pool);
+        let mut earnings_cron = EarningsHistoryCron::new(earnings_pool);
         if let Err(e) = earnings_cron.start().await {
             tracing::error!("Earnings history cron failed: {}", e);
         }
@@ -90,7 +100,7 @@ fn spawn_cron_jobs(pool: sqlx::MySqlPool) {
 
     let swap_pool = pool.clone();
     tokio::spawn(async move {
-        let mut swap_cron = services::cron::SwapHistoryCron::new(swap_pool);
+        let mut swap_cron = SwapHistoryCron::new(swap_pool);
         if let Err(e) = swap_cron.start().await {
             tracing::error!("Swap history cron failed: {}", e);
         }
@@ -98,7 +108,7 @@ fn spawn_cron_jobs(pool: sqlx::MySqlPool) {
 
     let runepool_pool = pool.clone();
     tokio::spawn(async move {
-        let mut runepool_cron = services::cron::RunepoolUnitsHistoryCron::new(runepool_pool);
+        let mut runepool_cron = RunepoolUnitsHistoryCron::new(runepool_pool);
         if let Err(e) = runepool_cron.start().await {
             tracing::error!("Runepool units history cron failed: {}", e);
         }
@@ -119,7 +129,7 @@ async fn fetch_and_store_depth_history(pool: &sqlx::MySqlPool) {
     match fetch_initial_depth_history().await {
         Ok(initial_data) => {
             tracing::info!("Successfully fetched initial depth history");
-            match services::depth_history::store_intervals(pool, &initial_data.intervals).await {
+            match depth::store_intervals(pool, &initial_data.intervals).await {
                 Ok(_) => tracing::info!(
                     "Successfully stored {} intervals",
                     initial_data.intervals.len()
@@ -136,7 +146,7 @@ async fn fetch_and_store_earnings_history(pool: &sqlx::MySqlPool) {
     match fetch_initial_earnings_history().await {
         Ok(initial_data) => {
             tracing::info!("Successfully fetched initial earnings history");
-            match services::earnings_history::store_intervals(pool, &initial_data.intervals).await {
+            match earnings::store_intervals(pool, &initial_data.intervals).await {
                 Ok(_) => tracing::info!(
                     "Successfully stored {} intervals",
                     initial_data.intervals.len()
@@ -153,7 +163,7 @@ async fn fetch_and_store_swap_history(pool: &sqlx::MySqlPool) {
     match fetch_initial_swap_history().await {
         Ok(initial_data) => {
             tracing::info!("Successfully fetched initial swap history");
-            match services::swap_history::store_intervals(pool, &initial_data.intervals).await {
+            match swap::store_intervals(pool, &initial_data.intervals).await {
                 Ok(_) => tracing::info!(
                     "Successfully stored {} intervals",
                     initial_data.intervals.len()
@@ -170,9 +180,7 @@ async fn fetch_and_store_runepool_units_history(pool: &sqlx::MySqlPool) {
     match fetch_initial_runepool_units_history().await {
         Ok(initial_data) => {
             tracing::info!("Successfully fetched initial runepool units history");
-            match services::runepool_units_history::store_intervals(pool, &initial_data.intervals)
-                .await
-            {
+            match runepool::store_intervals(pool, &initial_data.intervals).await {
                 Ok(_) => tracing::info!(
                     "Successfully stored {} intervals",
                     initial_data.intervals.len()
@@ -415,8 +423,4 @@ async fn fetch_initial_runepool_units_history(
 
     let runepool_units_history = response.json::<RunepoolUnitsHistoryResponse>().await?;
     Ok(runepool_units_history)
-}
-
-pub fn get_midgard_api_url() -> String {
-    env::var("MIDGARD_API_URL").unwrap_or_else(|_| "http://rick_roll.com".to_string())
 }

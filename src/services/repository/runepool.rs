@@ -1,4 +1,4 @@
-use crate::model::runepool_units_history::RunepoolUnitsInterval;
+use crate::core::models::runepool_units_history::RunepoolUnitsInterval;
 use sqlx::MySqlPool;
 
 pub async fn store_intervals(

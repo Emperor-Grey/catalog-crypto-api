@@ -1,4 +1,4 @@
-use crate::model::swap_history::SwapInterval;
+use crate::core::models::swap_history::SwapInterval;
 use sqlx::MySqlPool;
 
 pub async fn store_intervals(

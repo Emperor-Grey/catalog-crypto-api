@@ -1,4 +1,4 @@
-use crate::model::depth_history::DepthInterval;
+use crate::core::models::depth_history::DepthInterval;
 use sqlx::MySqlPool;
 
 pub async fn store_intervals(

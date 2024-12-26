@@ -1,7 +1,6 @@
-use crate::model::{
-    common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE},
-    depth_history::{DepthHistoryQueryParams, DepthInterval},
-};
+use crate::core::models::common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
+use crate::core::models::depth_history::DepthHistoryQueryParams;
+use crate::core::models::depth_history::DepthInterval;
 use axum::{
     extract::{Query, State},
     response::IntoResponse,

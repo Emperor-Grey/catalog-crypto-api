@@ -41,7 +41,7 @@ sqlx = { version = "0.8.2", features = [
 prkorm = "0.5.4"
 
 # For error handling but not used to thiserror don't ask me why i'am using it
-anyhow = "1.0.95"
+anyhow = "1.0.95"   # i have used it btw
 thiserror = "2.0.9"
 
 # For the api documentation
@@ -62,64 +62,3 @@ utoipa-swagger-ui = { version = "8.1.0", features = ["axum", "reqwest"] }
 # Runepool Units History
 # http://localhost:3000/runepool_units_history?limit=2&order=asc&sort_by=units&units_gt=0&page=2
 #&date_range=2023-08-01,2023-09-01  !!! give a proper date range ok this one does'nt work
-
-
-# TODO Make this folder structure in future after everything is working
-
-# catalog-crypto-api/
-# ├── .env
-# ├── .gitignore
-# ├── Cargo.toml
-# ├── README.md
-# └── src/
-#     ├── main.rs
-#     ├── config/
-#     │   ├── mod.rs
-#     │   ├── database.rs
-#     │   └── app.rs
-#     ├── api/
-#     │   ├── mod.rs
-#     │   ├��─ routes/
-#     │   │   ├── mod.rs
-#     │   │   ├── depth.rs
-#     │   │   ├── earnings.rs
-#     │   │   ├── runepool.rs
-#     │   │   └── swap.rs
-#     │   └── middleware/
-#     │       ├── mod.rs
-#     │       └── cors.rs
-#     ├── core/
-#     │   ├── mod.rs
-#     │   ├── models/
-#     │   │   ├── mod.rs
-#     │   │   ├── common/
-#     │   │   │   ├── mod.rs
-#     │   │   │   ├── interval.rs
-#     │   │   │   └── serialization.rs
-#     │   │   ├── depth.rs
-#     │   │   ├── earnings.rs
-#     │   │   ├── runepool.rs
-#     │   │   └── swap.rs
-#     │   └── error.rs
-#     ├── services/
-#     │   ├── mod.rs
-#     │   ├── clients/
-#     │   │   ├── mod.rs
-#     │   │   └── midgard.rs
-#     │   ├── repository/
-#     │   │   ├── mod.rs
-#     │   │   ├── depth.rs
-#     │   │   ├── earnings.rs
-#     │   │   ├── runepool.rs
-#     │   │   └── swap.rs
-#     │   └── jobs/
-#     │       ├── mod.rs
-#     │       └── cron/
-#     │           ├── mod.rs
-#     │           ├── depth.rs
-#     │           ├── earnings.rs
-#     │           ├── runepool.rs
-#     │           └── swap.rs
-#     └── utils/
-#         ├── mod.rs
-#         └── time.rs

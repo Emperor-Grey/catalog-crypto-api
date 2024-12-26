@@ -1,22 +1,26 @@
-use crate::get_midgard_api_url;
-use crate::model::common::Interval;
 use crate::{
-    model::earnings_history::{EarningsHistoryParams, EarningsHistoryResponse},
-    services::earnings_history::store_intervals,
+    core::models::{
+        common::Interval,
+        depth_history::{DepthHistoryParams, DepthHistoryResponse},
+    },
+    services::{
+        client::get_midgard_api_url,
+        repository::depth::store_intervals,
+    },
 };
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
 use tracing::{error, info};
 
-pub struct EarningsHistoryCron {
+pub struct DepthHistoryCron {
     pool: MySqlPool,
     interval: Interval,
     count: u32,
     last_fetch_time: Option<DateTime<Utc>>,
 }
 
-impl EarningsHistoryCron {
+impl DepthHistoryCron {
     pub fn new(pool: MySqlPool) -> Self {
         Self {
             pool,
@@ -29,7 +33,7 @@ impl EarningsHistoryCron {
     pub async fn start(&mut self) -> Result<(), anyhow::Error> {
         loop {
             if let Err(e) = self.fetch_and_store().await {
-                error!("Failed to fetch and store earnings history: {}", e);
+                error!("Failed to fetch and store depth history: {}", e);
                 time::sleep(Duration::seconds(3).to_std().unwrap()).await;
                 continue;
             }
@@ -42,7 +46,7 @@ impl EarningsHistoryCron {
         let client = reqwest::Client::new();
 
         loop {
-            let params = EarningsHistoryParams {
+            let params = DepthHistoryParams {
                 interval: Some(self.interval.clone()),
                 count: Some(self.count),
                 from: self.last_fetch_time,
@@ -50,7 +54,7 @@ impl EarningsHistoryCron {
             };
 
             let base_url = get_midgard_api_url();
-            let mut url = reqwest::Url::parse(&format!("{}/history/earnings", base_url))?;
+            let mut url = reqwest::Url::parse(&format!("{}/history/depths/ETH.ETH", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()
@@ -71,26 +75,25 @@ impl EarningsHistoryCron {
                 Ok(response) => {
                     let response_text = response.text().await?;
 
-                    // Check if we got rate limited
                     if response_text.contains("slow down") {
                         tracing::warn!("Rate limited, waiting for 5 seconds before retry...");
                         time::sleep(Duration::seconds(5).to_std().unwrap()).await;
                         continue;
                     }
 
-                    match serde_json::from_str::<EarningsHistoryResponse>(&response_text) {
-                        Ok(earnings_history) => {
-                            store_intervals(&self.pool, &earnings_history.intervals).await?;
+                    match serde_json::from_str::<DepthHistoryResponse>(&response_text) {
+                        Ok(depth_history) => {
+                            store_intervals(&self.pool, &depth_history.intervals).await?;
 
                             info!(
                                 "Successfully stored {} intervals",
-                                earnings_history.intervals.len()
+                                depth_history.intervals.len()
                             );
 
-                            if let Some(last_interval) = earnings_history.intervals.last() {
+                            if let Some(last_interval) = depth_history.intervals.last() {
                                 self.last_fetch_time = Some(last_interval.end_time);
                                 info!(
-                                    "Successfully updated earnings history. URL: {} Last fetch time: {}",
+                                    "Successfully updated depth history. URL: {} Last fetch time: {}",
                                     url, last_interval.end_time
                                 );
                             }

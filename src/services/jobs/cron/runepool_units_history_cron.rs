@@ -1,22 +1,26 @@
-use crate::{get_midgard_api_url, model::common::Interval};
+use crate::{
+    core::models::{
+        common::Interval,
+        runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
+    },
+    services::{
+        client::get_midgard_api_url,
+        repository::runepool::store_intervals,
+    },
+};
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
 use tracing::{error, info};
 
-use crate::{
-    model::depth_history::{DepthHistoryParams, DepthHistoryResponse},
-    services::depth_history::store_intervals,
-};
-
-pub struct DepthHistoryCron {
+pub struct RunepoolUnitsHistoryCron {
     pool: MySqlPool,
     interval: Interval,
     count: u32,
     last_fetch_time: Option<DateTime<Utc>>,
 }
 
-impl DepthHistoryCron {
+impl RunepoolUnitsHistoryCron {
     pub fn new(pool: MySqlPool) -> Self {
         Self {
             pool,
@@ -29,7 +33,7 @@ impl DepthHistoryCron {
     pub async fn start(&mut self) -> Result<(), anyhow::Error> {
         loop {
             if let Err(e) = self.fetch_and_store().await {
-                error!("Failed to fetch and store depth history: {}", e);
+                error!("Failed to fetch and store runepool units history: {}", e);
                 time::sleep(Duration::seconds(3).to_std().unwrap()).await;
                 continue;
             }
@@ -37,12 +41,11 @@ impl DepthHistoryCron {
             time::sleep(Duration::seconds(3).to_std().unwrap()).await;
         }
     }
-
     async fn fetch_and_store(&mut self) -> Result<(), anyhow::Error> {
         let client = reqwest::Client::new();
 
         loop {
-            let params = DepthHistoryParams {
+            let params = RunepoolUnitsHistoryParams {
                 interval: Some(self.interval.clone()),
                 count: Some(self.count),
                 from: self.last_fetch_time,
@@ -50,7 +53,7 @@ impl DepthHistoryCron {
             };
 
             let base_url = get_midgard_api_url();
-            let mut url = reqwest::Url::parse(&format!("{}/history/depths/ETH.ETH", base_url))?;
+            let mut url = reqwest::Url::parse(&format!("{}/history/runepool", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()
@@ -77,19 +80,19 @@ impl DepthHistoryCron {
                         continue;
                     }
 
-                    match serde_json::from_str::<DepthHistoryResponse>(&response_text) {
-                        Ok(depth_history) => {
-                            store_intervals(&self.pool, &depth_history.intervals).await?;
+                    match serde_json::from_str::<RunepoolUnitsHistoryResponse>(&response_text) {
+                        Ok(runepool_history) => {
+                            store_intervals(&self.pool, &runepool_history.intervals).await?;
 
                             info!(
                                 "Successfully stored {} intervals",
-                                depth_history.intervals.len()
+                                runepool_history.intervals.len()
                             );
 
-                            if let Some(last_interval) = depth_history.intervals.last() {
+                            if let Some(last_interval) = runepool_history.intervals.last() {
                                 self.last_fetch_time = Some(last_interval.end_time);
                                 info!(
-                                    "Successfully updated depth history. URL: {} Last fetch time: {}",
+                                    "Successfully updated runepool units history. URL: {} Last fetch time: {}",
                                     url, last_interval.end_time
                                 );
                             }

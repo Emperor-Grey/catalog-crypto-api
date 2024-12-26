@@ -4,12 +4,14 @@ use tokio::time;
 use tracing::{error, info};
 
 use crate::{
-    get_midgard_api_url,
-    model::{
+    core::models::{
         common::Interval,
         swap_history::{SwapHistoryParams, SwapHistoryResponse},
     },
-    services::swap_history,
+    services::{
+        client::get_midgard_api_url,
+        repository::swap::store_intervals,
+    },
 };
 
 pub struct SwapHistoryCron {
@@ -82,8 +84,7 @@ impl SwapHistoryCron {
 
                     match serde_json::from_str::<SwapHistoryResponse>(&response_text) {
                         Ok(swap_history) => {
-                            swap_history::store_intervals(&self.pool, &swap_history.intervals)
-                                .await?;
+                            store_intervals(&self.pool, &swap_history.intervals).await?;
 
                             info!(
                                 "Successfully stored {} intervals",
