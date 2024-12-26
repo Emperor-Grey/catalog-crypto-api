@@ -106,7 +106,7 @@ async fn start_server(pool: sqlx::MySqlPool) {
         .with_state(pool)
         .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", SwaggerApiDoc::openapi()));
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = TcpListener::bind(addr).await.unwrap();
 
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
