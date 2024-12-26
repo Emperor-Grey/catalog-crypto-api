@@ -35,7 +35,7 @@ use crate::core::models::{
     ),
     servers(
         (url = "http://localhost:3000", description = "Local development server"),
-        // (url = "https://api.production.example.com", description = "Production server")
+        (url = "https://catalog-crypto-api.onrender.com", description = "Production server")
     ),
     tags(
         (name = "depth", description = "Depth history operations"),
