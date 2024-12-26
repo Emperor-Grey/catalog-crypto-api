@@ -1,6 +1,7 @@
 use crate::core::models::common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
-use crate::core::models::runepool_units_history::RunepoolUnitsHistoryQueryParams;
-use crate::core::models::runepool_units_history::RunepoolUnitsInterval;
+use crate::core::models::runepool_units_history::{
+    MetaStats, RunepoolUnitsHistoryQueryParams, RunepoolUnitsHistoryResponse, RunepoolUnitsInterval,
+};
 use axum::http::StatusCode;
 
 use axum::Json;
@@ -97,7 +98,30 @@ pub async fn get_runepool_units_history(
                 .into_response();
             }
 
-            Json(intervals).into_response()
+            let meta_stats =
+                if let (Some(first), Some(last)) = (intervals.first(), intervals.last()) {
+                    MetaStats {
+                        start_time: first.start_time,
+                        end_time: last.end_time,
+                        start_count: first.count,
+                        end_count: last.count,
+                        start_units: first.units,
+                        end_units: last.units,
+                    }
+                } else {
+                    return Json(json!({
+                        "success": true,
+                        "data": "no data found in the database for the given params"
+                    }))
+                    .into_response();
+                };
+
+            let response = RunepoolUnitsHistoryResponse {
+                intervals,
+                meta_stats,
+            };
+
+            Json(response).into_response()
         }
         Err(e) => {
             error!("Database error: {}", e);

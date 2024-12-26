@@ -1,6 +1,7 @@
 use crate::core::models::common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
-use crate::core::models::depth_history::DepthHistoryQueryParams;
-use crate::core::models::depth_history::DepthInterval;
+use crate::core::models::depth_history::{
+    DepthHistoryQueryParams, DepthHistoryResponse, DepthInterval, MetaStats,
+};
 use axum::{
     extract::{Query, State},
     response::IntoResponse,
@@ -17,11 +18,11 @@ use tracing::{debug, error, info};
     tag = "depth",
     params(
         ("date_range" = Option<String>, Query, description = "Date range in format YYYY-MM-DD,YYYY-MM-DD"),
-        ("liquidity_gt" = Option<u64>, Query, description = "Filter by minimum liquidity"),
-        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
-        ("order" = Option<String>, Query, description = "Sort order (asc/desc)"),
-        ("page" = Option<u32>, Query, description = "Page number"),
-        ("limit" = Option<u32>, Query, description = "Items per page")
+        ("liquidity_gt" = Option<u64>, Query, description = "Filter by minimum liquidity. Default is `0`"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by. Default is `start_time`"),
+        ("order" = Option<String>, Query, description = "Sort order (asc/desc). Default is `desc`"),
+        ("page" = Option<u32>, Query, description = "Page number. Default is `0`"),
+        ("limit" = Option<u32>, Query, description = "Items per page. Default is `100`")
     ),
     responses(
         (status = 200, description = "List of depth history intervals", body = Vec<DepthInterval>),
@@ -106,7 +107,40 @@ pub async fn get_depth_history(
                 .into_response();
             }
 
-            Json(intervals).into_response()
+            // Calculate meta statistics
+            let meta_stats =
+                if let (Some(first), Some(last)) = (intervals.first(), intervals.last()) {
+                    MetaStats {
+                        start_time: first.start_time,
+                        end_time: last.end_time,
+                        start_asset_depth: first.asset_depth,
+                        end_asset_depth: last.asset_depth,
+                        start_rune_depth: first.rune_depth,
+                        end_rune_depth: last.rune_depth,
+                        start_lp_units: first.liquidity_units,
+                        end_lp_units: last.liquidity_units,
+                        start_member_count: first.members_count,
+                        end_member_count: last.members_count,
+                        start_synth_units: first.synth_units,
+                        end_synth_units: last.synth_units,
+                        // TODO Calculate this
+                        luvi_increase: 0.0,
+                        price_shift_loss: 0.0,
+                    }
+                } else {
+                    return Json(json!({
+                        "success": true,
+                        "data": "no data found"
+                    }))
+                    .into_response();
+                };
+
+            let response = DepthHistoryResponse {
+                intervals,
+                meta_stats,
+            };
+
+            Json(response).into_response()
         }
         Err(e) => {
             error!("Database error when fetching depth intervals: {}", e);

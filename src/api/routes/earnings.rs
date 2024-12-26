@@ -1,5 +1,6 @@
 use crate::core::models::common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE};
 use crate::core::models::earnings_history::{EarningsHistoryQueryParams, Pool};
+use crate::core::models::earnings_history::{EarningsHistoryResponse, IntervalData, MetaStats};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::{
@@ -7,7 +8,6 @@ use axum::{
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
 use serde_json::json;
 use serde_json::Value as JsonValue;
 use sqlx::prelude::FromRow;
@@ -17,7 +17,7 @@ use utoipa::ToSchema;
 
 // !Just cuz in the models, we have intervalData which contains Vec<Pool> and rust don't know how to deserialize it
 // !So we need to create a new struct to deserialize it (Only solution i found)
-#[derive(Debug, FromRow, ToSchema)]
+#[derive(Debug, FromRow, ToSchema, Clone)]
 struct EarningIntervalDB {
     pub avg_node_count: f64,
     pub block_rewards: u64,
@@ -31,27 +31,27 @@ struct EarningIntervalDB {
     pub pools: JsonValue,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
-struct IntervalResponse {
-    #[serde(rename = "avgNodeCount")]
-    avg_node_count: f64,
-    #[serde(rename = "blockRewards")]
-    block_rewards: String,
-    #[serde(rename = "bondingEarnings")]
-    bonding_earnings: String,
-    earnings: String,
-    #[serde(rename = "endTime")]
-    end_time: i64,
-    #[serde(rename = "liquidityEarnings")]
-    liquidity_earnings: String,
-    #[serde(rename = "liquidityFees")]
-    liquidity_fees: String,
-    #[serde(rename = "runePriceUSD")]
-    rune_price_usd: f64,
-    #[serde(rename = "startTime")]
-    start_time: i64,
-    pools: Vec<Pool>,
-}
+// #[derive(Debug, Serialize, ToSchema)]
+// struct IntervalResponse {
+//     #[serde(rename = "avgNodeCount")]
+//     avg_node_count: f64,
+//     #[serde(rename = "blockRewards")]
+//     block_rewards: String,
+//     #[serde(rename = "bondingEarnings")]
+//     bonding_earnings: String,
+//     earnings: String,
+//     #[serde(rename = "endTime")]
+//     end_time: i64,
+//     #[serde(rename = "liquidityEarnings")]
+//     liquidity_earnings: String,
+//     #[serde(rename = "liquidityFees")]
+//     liquidity_fees: String,
+//     #[serde(rename = "runePriceUSD")]
+//     rune_price_usd: f64,
+//     #[serde(rename = "startTime")]
+//     start_time: i64,
+//     pools: Vec<Pool>,
+// }
 
 #[utoipa::path(
     get,
@@ -70,7 +70,7 @@ struct IntervalResponse {
         ("limit" = Option<u32>, Query, description = "Items per page. Default is `100`")
     ),
     responses(
-        (status = 200, description = "List of earnings history intervals", body = Vec<IntervalResponse>),
+        (status = 200, description = "List of earnings history intervals", body = EarningsHistoryResponse),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -147,20 +147,28 @@ pub async fn get_earnings_history(
         .await
     {
         Ok(db_intervals) => {
-            let intervals: Result<Vec<IntervalResponse>, serde_json::Error> = db_intervals
-                .into_iter()
-                .map(|db| {
-                    let pools: Vec<Pool> = serde_json::from_value(db.pools)?;
+            if db_intervals.is_empty() {
+                return Json(json!({
+                    "success": true,
+                    "data": "no data found in the database for the given params"
+                }))
+                .into_response();
+            }
 
-                    Ok(IntervalResponse {
-                        start_time: db.start_time.timestamp(),
-                        end_time: db.end_time.timestamp(),
+            let intervals: Result<Vec<IntervalData>, serde_json::Error> = db_intervals
+                .iter()
+                .map(|db| {
+                    let pools: Vec<Pool> = serde_json::from_value(db.pools.clone())?;
+
+                    Ok(IntervalData {
+                        start_time: db.start_time,
+                        end_time: db.end_time,
                         avg_node_count: db.avg_node_count,
-                        block_rewards: db.block_rewards.to_string(),
-                        bonding_earnings: db.bonding_earnings.to_string(),
-                        earnings: db.earnings.to_string(),
-                        liquidity_earnings: db.liquidity_earnings.to_string(),
-                        liquidity_fees: db.liquidity_fees.to_string(),
+                        block_rewards: db.block_rewards,
+                        bonding_earnings: db.bonding_earnings,
+                        earnings: db.earnings,
+                        liquidity_earnings: db.liquidity_earnings,
+                        liquidity_fees: db.liquidity_fees,
                         rune_price_usd: db.rune_price_usd,
                         pools,
                     })
@@ -169,20 +177,34 @@ pub async fn get_earnings_history(
 
             match intervals {
                 Ok(intervals) => {
-                    info!(
-                        "Successfully retrieved {} earnings intervals",
-                        intervals.len()
-                    );
-
-                    if intervals.is_empty() {
+                    // Calculate meta statistics
+                    let meta_stats = if let (Some(_first), Some(last)) =
+                        (db_intervals.first(), db_intervals.last())
+                    {
+                        MetaStats {
+                            avg_node_count: last.avg_node_count,
+                            block_rewards: last.block_rewards,
+                            bonding_earnings: last.bonding_earnings,
+                            earnings: last.earnings,
+                            end_time: last.end_time,
+                            liquidity_earnings: last.liquidity_earnings,
+                            liquidity_fees: last.liquidity_fees,
+                            pools: serde_json::from_value(last.pools.clone()).unwrap_or_default(),
+                        }
+                    } else {
                         return Json(json!({
                             "success": true,
-                            "data": "no data found in the database for the given params"
+                            "data": "no data found"
                         }))
                         .into_response();
-                    }
+                    };
 
-                    Json(intervals).into_response()
+                    let response = EarningsHistoryResponse {
+                        intervals,
+                        meta_stats,
+                    };
+
+                    Json(response).into_response()
                 }
                 Err(e) => {
                     error!("Error parsing intervals: {}", e);

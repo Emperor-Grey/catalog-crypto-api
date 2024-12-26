@@ -158,10 +158,90 @@ pub struct SwapInterval {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct SwapMeta {
+    #[serde(rename = "averageSlip", with = "float_serialization")]
+    pub average_slip: f64,
+    #[serde(rename = "endTime", with = "timestamp_serialization")]
+    pub end_time: DateTime<Utc>,
+    #[serde(rename = "fromTradeAverageSlip", with = "float_serialization")]
+    pub from_trade_average_slip: f64,
+    #[serde(rename = "fromTradeCount", with = "u64_serialization")]
+    pub from_trade_count: u64,
+    #[serde(rename = "fromTradeFees", with = "u64_serialization")]
+    pub from_trade_fees: u64,
+    #[serde(rename = "fromTradeVolume", with = "u64_serialization")]
+    pub from_trade_volume: u64,
+    #[serde(rename = "fromTradeVolumeUSD", with = "u64_serialization")]
+    pub from_trade_volume_usd: u64,
+    #[serde(rename = "runePriceUSD", with = "float_serialization")]
+    pub rune_price_usd: f64,
+    #[serde(rename = "startTime", with = "timestamp_serialization")]
+    pub start_time: DateTime<Utc>,
+    #[serde(rename = "synthMintAverageSlip", with = "float_serialization")]
+    pub synth_mint_average_slip: f64,
+    #[serde(rename = "synthMintCount", with = "u64_serialization")]
+    pub synth_mint_count: u64,
+    #[serde(rename = "synthMintFees", with = "u64_serialization")]
+    pub synth_mint_fees: u64,
+    #[serde(rename = "synthMintVolume", with = "u64_serialization")]
+    pub synth_mint_volume: u64,
+    #[serde(rename = "synthMintVolumeUSD", with = "u64_serialization")]
+    pub synth_mint_volume_usd: u64,
+    #[serde(rename = "synthRedeemAverageSlip", with = "float_serialization")]
+    pub synth_redeem_average_slip: f64,
+    #[serde(rename = "synthRedeemCount", with = "u64_serialization")]
+    pub synth_redeem_count: u64,
+    #[serde(rename = "synthRedeemFees", with = "u64_serialization")]
+    pub synth_redeem_fees: u64,
+    #[serde(rename = "synthRedeemVolume", with = "u64_serialization")]
+    pub synth_redeem_volume: u64,
+    #[serde(rename = "synthRedeemVolumeUSD", with = "u64_serialization")]
+    pub synth_redeem_volume_usd: u64,
+    #[serde(rename = "toAssetAverageSlip", with = "float_serialization")]
+    pub to_asset_average_slip: f64,
+    #[serde(rename = "toAssetCount", with = "u64_serialization")]
+    pub to_asset_count: u64,
+    #[serde(rename = "toAssetFees", with = "u64_serialization")]
+    pub to_asset_fees: u64,
+    #[serde(rename = "toAssetVolume", with = "u64_serialization")]
+    pub to_asset_volume: u64,
+    #[serde(rename = "toAssetVolumeUSD", with = "u64_serialization")]
+    pub to_asset_volume_usd: u64,
+    #[serde(rename = "toRuneAverageSlip", with = "float_serialization")]
+    pub to_rune_average_slip: f64,
+    #[serde(rename = "toRuneCount", with = "u64_serialization")]
+    pub to_rune_count: u64,
+    #[serde(rename = "toRuneFees", with = "u64_serialization")]
+    pub to_rune_fees: u64,
+    #[serde(rename = "toRuneVolume", with = "u64_serialization")]
+    pub to_rune_volume: u64,
+    #[serde(rename = "toRuneVolumeUSD", with = "u64_serialization")]
+    pub to_rune_volume_usd: u64,
+    #[serde(rename = "toTradeAverageSlip", with = "float_serialization")]
+    pub to_trade_average_slip: f64,
+    #[serde(rename = "toTradeCount", with = "u64_serialization")]
+    pub to_trade_count: u64,
+    #[serde(rename = "toTradeFees", with = "u64_serialization")]
+    pub to_trade_fees: u64,
+    #[serde(rename = "toTradeVolume", with = "u64_serialization")]
+    pub to_trade_volume: u64,
+    #[serde(rename = "toTradeVolumeUSD", with = "u64_serialization")]
+    pub to_trade_volume_usd: u64,
+    #[serde(rename = "totalCount", with = "u64_serialization")]
+    pub total_count: u64,
+    #[serde(rename = "totalFees", with = "u64_serialization")]
+    pub total_fees: u64,
+    #[serde(rename = "totalVolume", with = "u64_serialization")]
+    pub total_volume: u64,
+    #[serde(rename = "totalVolumeUSD", with = "u64_serialization")]
+    pub total_volume_usd: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SwapHistoryResponse {
     pub intervals: Vec<SwapInterval>,
     #[serde(rename = "meta")]
-    pub meta_stats: SwapInterval,
+    pub meta_stats: SwapMeta,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

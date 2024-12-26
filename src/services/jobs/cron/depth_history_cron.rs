@@ -120,12 +120,12 @@ impl DepthHistoryCron {
         let now = Utc::now();
         let one_hour_ago = now - Duration::hours(1);
 
-        let params = DepthHistoryParams {
-            interval: Some(Interval::Hour),
-            count: Some(1),
-            from: Some(one_hour_ago),
-            to: Some(now),
-        };
+        // let params = DepthHistoryParams {
+        //     interval: Some(Interval::Hour),
+        //     count: Some(1),
+        //     from: Some(one_hour_ago),
+        //     to: Some(now),
+        // };
 
         let client = reqwest::Client::new();
         let base_url = get_midgard_api_url();
