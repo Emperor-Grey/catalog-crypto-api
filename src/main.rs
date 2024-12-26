@@ -15,6 +15,7 @@ use dotenv::dotenv;
 use http::Method;
 use reqwest::Client;
 use services::client::get_midgard_api_url;
+use services::jobs::cron::hourly_fetcher::HourlyFetcher;
 use services::repository::{depth, earnings, runepool, swap};
 use std::env;
 use std::net::SocketAddr;
@@ -52,8 +53,8 @@ async fn main() {
     dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("Database url issue");
-    println!("The fetching url is {}", get_midgard_api_url());
-    println!("The database url is {}", database_url);
+    // println!("The fetching url is {}", get_midgard_api_url());
+    // println!("The database url is {}", database_url);
 
     let pool = connect::connect_database(&database_url)
         .await
@@ -67,6 +68,14 @@ async fn main() {
     // !NOTE: Uncomment this if you want to fetch initial data and read the comment above the main
     // spawn_cron_jobs(pool.clone());
     // fetch_initial_data(pool.clone()).await;
+
+    let hourly_pool = pool.clone();
+    tokio::spawn(async move {
+        let mut hourly_fetcher = HourlyFetcher::new(hourly_pool);
+        if let Err(e) = hourly_fetcher.start().await {
+            tracing::error!("Hourly fetcher failed: {}", e);
+        }
+    });
 
     start_server(pool).await;
 }

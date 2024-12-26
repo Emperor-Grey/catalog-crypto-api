@@ -3,10 +3,7 @@ use crate::{
         common::Interval,
         runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
     },
-    services::{
-        client::get_midgard_api_url,
-        repository::runepool::store_intervals,
-    },
+    services::{client::get_midgard_api_url, repository::runepool::store_intervals},
 };
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
@@ -114,6 +111,57 @@ impl RunepoolUnitsHistoryCron {
                     time::sleep(Duration::seconds(5).to_std().unwrap()).await;
                     continue;
                 }
+            }
+        }
+    }
+
+    // Box Pin to avoid indefinite recursion
+    pub async fn fetch_latest_hour(&mut self) -> Result<(), anyhow::Error> {
+        let now = Utc::now();
+        let one_hour_ago = now - Duration::hours(1);
+
+        let params = RunepoolUnitsHistoryParams {
+            interval: Some(Interval::Hour),
+            count: Some(1),
+            from: Some(one_hour_ago),
+            to: Some(now),
+        };
+
+        let client = reqwest::Client::new();
+        let base_url = get_midgard_api_url();
+        let mut url = reqwest::Url::parse(&format!("{}/history/runepool", base_url))?;
+
+        url.query_pairs_mut()
+            .append_pair("interval", "hour")
+            .append_pair("count", "1")
+            .append_pair("from", &one_hour_ago.timestamp().to_string())
+            .append_pair("to", &now.timestamp().to_string());
+
+        match client.get(url.clone()).send().await {
+            Ok(response) => {
+                let response_text = response.text().await?;
+
+                if response_text.contains("slow down") {
+                    tracing::warn!("Rate limited, waiting for 5 seconds before retry...");
+                    time::sleep(Duration::seconds(5).to_std().unwrap()).await;
+                    return Box::pin(self.fetch_latest_hour()).await;
+                }
+
+                match serde_json::from_str::<RunepoolUnitsHistoryResponse>(&response_text) {
+                    Ok(runepool_history) => {
+                        store_intervals(&self.pool, &runepool_history.intervals).await?;
+                        info!("Successfully stored latest hour runepool units data");
+                        Ok(())
+                    }
+                    Err(e) => {
+                        error!("Failed to parse response: {}", e);
+                        Err(anyhow::anyhow!("Failed to parse response"))
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Request failed: {}", e);
+                Err(anyhow::anyhow!("Request failed"))
             }
         }
     }

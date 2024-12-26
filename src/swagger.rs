@@ -14,14 +14,15 @@ use crate::core::models::{
     info(
         title = "Crypto History API",
         version = "1.0.0",
-        description = "A comprehensive REST API for fetching and managing historical cryptocurrency data from the THORChain network. Features include:
-                    - Depth history tracking for liquidity pools
-                    - Swap transaction analytics and metrics
-                    - Network earnings data across different pools
-                    - Runepool units historical data
+        description = "A comprehensive REST API for fetching and managing historical cryptocurrency data from the THORChain network (midgard).
 
-'The API supports pagination, filtering, sorting, and date range queries. Data is continuously synchronized through background cron jobs 
-with rate limiting protection. Built with Rust using Axum framework and MySQL for persistence.'
+    Features include:
+        - Depth history tracking for liquidity pools
+        - Swap transaction analytics and metrics
+        - Network earnings data across different pools
+        - Runepool units historical data
+
+'The API supports pagination, filtering, sorting, and date range queries. Data is continuously synchronized through background cron jobs with rate limiting protection. Built with Rust using Axum framework and MySQL for persistence.'
 ",
         contact(
             name = "API Support",
