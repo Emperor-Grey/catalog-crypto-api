@@ -4,7 +4,10 @@ use axum::{routing::get, Router};
 use chrono::Utc;
 use config::connect;
 use dotenv::dotenv;
-use handlers::{depth_history::get_depth_history, earning_history::get_earnings_history};
+use handlers::{
+    depth_history::get_depth_history, earning_history::get_earnings_history,
+    runepool_unit_history::get_runepool_units_history, swap_history::get_swap_history,
+};
 use http::Method;
 use model::{
     common::Interval,
@@ -16,18 +19,22 @@ use model::{
 use reqwest::Client;
 use std::env;
 use std::net::SocketAddr;
+use swagger::SwaggerApiDoc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 mod config;
 mod handlers;
 mod model;
 mod services;
+mod swagger;
 
 /* ************************************************************ */
 /* ************************************************************ */
-// !NOTE: PLEASE FETCH THINGS ONE BY ONE BECAUSE OF RATE LIMITS
+/* !NOTE: PLEASE FETCH THINGS ONE BY ONE BECAUSE OF RATE LIMITS */
 /* ************************************************************ */
 /* ************************************************************ */
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
@@ -35,6 +42,9 @@ async fn main() {
     dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("Database url issue");
+    // println!("The fetching url is {}", get_midgard_api_url());
+    // println!("The database url is {}", database_url);
+
     let pool = connect::connect_database(&database_url)
         .await
         .expect("Failed to connect to database");
@@ -185,7 +195,10 @@ async fn start_server(pool: sqlx::MySqlPool) {
         .route("/", get(root))
         .route("/depth_history", get(get_depth_history))
         .route("/earning_history", get(get_earnings_history))
-        .with_state(pool);
+        .route("/swap_history", get(get_swap_history))
+        .route("/runepool_units_history", get(get_runepool_units_history))
+        .with_state(pool)
+        .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", SwaggerApiDoc::openapi()));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = TcpListener::bind(addr).await.unwrap();
@@ -206,6 +219,7 @@ async fn root() -> &'static str {
 
 async fn fetch_initial_depth_history() -> Result<DepthHistoryResponse, reqwest::Error> {
     let client = Client::new();
+    let base_url = get_midgard_api_url();
 
     let params = DepthHistoryParams {
         interval: Some(Interval::Hour),
@@ -214,7 +228,7 @@ async fn fetch_initial_depth_history() -> Result<DepthHistoryResponse, reqwest::
         to: Some(Utc::now()),
     };
 
-    let mut url = reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/depths/ETH.ETH")
+    let mut url = reqwest::Url::parse(&format!("{}/history/depths/ETH.ETH", base_url))
         .expect("Failed to parse URL");
 
     if let Some(interval) = &params.interval {
@@ -254,6 +268,7 @@ async fn fetch_initial_depth_history() -> Result<DepthHistoryResponse, reqwest::
 
 async fn fetch_initial_earnings_history() -> Result<EarningsHistoryResponse, reqwest::Error> {
     let client = Client::new();
+    let base_url = get_midgard_api_url();
 
     let params = EarningsHistoryParams {
         interval: Some(Interval::Hour),
@@ -262,7 +277,7 @@ async fn fetch_initial_earnings_history() -> Result<EarningsHistoryResponse, req
         to: Some(Utc::now()),
     };
 
-    let mut url = reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/earnings")
+    let mut url = reqwest::Url::parse(&format!("{}/history/earnings", base_url))
         .expect("Failed to parse URL");
 
     if let Some(interval) = &params.interval {
@@ -303,6 +318,7 @@ async fn fetch_initial_earnings_history() -> Result<EarningsHistoryResponse, req
 
 async fn fetch_initial_swap_history() -> Result<SwapHistoryResponse, reqwest::Error> {
     let client = Client::new();
+    let base_url = get_midgard_api_url();
 
     let params = SwapHistoryParams {
         interval: Some(Interval::Hour),
@@ -311,8 +327,8 @@ async fn fetch_initial_swap_history() -> Result<SwapHistoryResponse, reqwest::Er
         to: Some(Utc::now()),
     };
 
-    let mut url = reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/swaps")
-        .expect("Failed to parse URL");
+    let mut url =
+        reqwest::Url::parse(&format!("{}/history/swaps", base_url)).expect("Failed to parse URL");
 
     if let Some(interval) = &params.interval {
         url.query_pairs_mut().append_pair(
@@ -353,6 +369,7 @@ async fn fetch_initial_swap_history() -> Result<SwapHistoryResponse, reqwest::Er
 async fn fetch_initial_runepool_units_history(
 ) -> Result<RunepoolUnitsHistoryResponse, reqwest::Error> {
     let client = Client::new();
+    let base_url = get_midgard_api_url();
 
     let params = RunepoolUnitsHistoryParams {
         interval: Some(Interval::Hour),
@@ -361,7 +378,7 @@ async fn fetch_initial_runepool_units_history(
         to: Some(Utc::now()),
     };
 
-    let mut url = reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/runepool")
+    let mut url = reqwest::Url::parse(&format!("{}/history/runepool", base_url))
         .expect("Failed to parse URL");
 
     if let Some(interval) = &params.interval {
@@ -398,4 +415,8 @@ async fn fetch_initial_runepool_units_history(
 
     let runepool_units_history = response.json::<RunepoolUnitsHistoryResponse>().await?;
     Ok(runepool_units_history)
+}
+
+pub fn get_midgard_api_url() -> String {
+    env::var("MIDGARD_API_URL").unwrap_or_else(|_| "http://rick_roll.com".to_string())
 }

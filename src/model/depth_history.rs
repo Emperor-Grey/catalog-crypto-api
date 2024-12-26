@@ -2,6 +2,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use prkorm::Table;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::ToSchema;
 
 use super::common::Interval;
 
@@ -92,7 +93,7 @@ mod u32_serialization {
     }
 }
 
-#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 #[table_name("`depth_intervals`")]
 pub struct DepthInterval {
     #[serde(rename = "assetDepth", with = "u64_serialization")]
@@ -121,7 +122,7 @@ pub struct DepthInterval {
     pub units: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MetaStats {
     #[serde(rename = "endAssetDepth", with = "u64_serialization")]
     pub end_asset_depth: u64,
@@ -153,17 +154,29 @@ pub struct MetaStats {
     pub start_time: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct DepthHistoryResponse {
     pub intervals: Vec<DepthInterval>,
     #[serde(rename = "meta")]
     pub meta_stats: MetaStats,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct DepthHistoryParams {
     pub interval: Option<Interval>,
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct DepthHistoryQueryParams {
+    pub date_range: Option<String>,
+    pub liquidity_gt: Option<u64>,
+    // pub interval: Option<Interval>, // TODO Handle this next time FOR NOW WE ARE NOT USING THIS
+    #[serde(rename = "sort_by")]
+    pub sort_field: Option<String>, // Do you know you can also pass this timestamp, (this gets mapped to start_time internally)
+    pub order: Option<String>,
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
 }

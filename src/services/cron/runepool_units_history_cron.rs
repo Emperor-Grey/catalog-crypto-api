@@ -1,3 +1,4 @@
+use crate::get_midgard_api_url;
 use crate::model::common::Interval;
 use crate::{
     model::runepool_units_history::{RunepoolUnitsHistoryParams, RunepoolUnitsHistoryResponse},
@@ -47,8 +48,8 @@ impl RunepoolUnitsHistoryCron {
                 to: None,
             };
 
-            let mut url =
-                reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/runepool")?;
+            let base_url = get_midgard_api_url();
+            let mut url = reqwest::Url::parse(&format!("{}/history/runepool", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()

@@ -1,7 +1,16 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+use super::{
+    depth_history::DepthHistoryQueryParams, earnings_history::EarningsHistoryQueryParams,
+    runepool_units_history::RunepoolUnitsHistoryQueryParams, swap_history::SwapHistoryQueryParams,
+};
+
+pub const DEFAULT_PAGE_SIZE: u32 = 30;
+pub const MAX_PAGE_SIZE: u32 = 400;
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Interval {
     #[serde(rename = "5min")]
@@ -16,15 +25,16 @@ pub enum Interval {
 
 impl std::fmt::Display for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Interval::FiveMin => write!(f, "5min"),
-            Interval::Hour => write!(f, "hour"),
-            Interval::Day => write!(f, "day"),
-            Interval::Week => write!(f, "week"),
-            Interval::Month => write!(f, "month"),
-            Interval::Quarter => write!(f, "quarter"),
-            Interval::Year => write!(f, "year"),
-        }
+        let interval_str = match self {
+            Interval::FiveMin => "5min",
+            Interval::Hour => "hour",
+            Interval::Day => "day",
+            Interval::Week => "week",
+            Interval::Month => "month",
+            Interval::Quarter => "quarter",
+            Interval::Year => "year",
+        };
+        write!(f, "{}", interval_str)
     }
 }
 
@@ -44,34 +54,6 @@ impl TryFrom<String> for Interval {
         }
     }
 }
-
-#[derive(Debug, Deserialize)]
-pub struct DepthHistoryQueryParams {
-    pub date_range: Option<String>,
-    pub liquidity_gt: Option<u64>,
-    pub interval: Option<Interval>,
-    #[serde(rename = "sort_by")]
-    pub sort_field: Option<String>, // Do you know you can also pass this timestamp, (this gets mapped to start_time internally)
-    pub order: Option<String>,
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EarningsHistoryQueryParams {
-    pub date_range: Option<String>,
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-    pub sort_by: Option<String>,
-    pub order: Option<String>,
-    pub earnings_gt: Option<u64>,
-    pub block_rewards_gt: Option<u64>,
-    pub node_count_gt: Option<f64>,
-    pub pool: Option<String>,
-}
-
-pub const DEFAULT_PAGE_SIZE: u32 = 30;
-pub const MAX_PAGE_SIZE: u32 = 400;
 
 impl DepthHistoryQueryParams {
     // Helper method to parse date range
@@ -143,4 +125,59 @@ impl EarningsHistoryQueryParams {
             None => "start_time", // Default sort field
         }
     }
+}
+
+impl SwapHistoryQueryParams {
+    pub fn get_sort_field(&self) -> &str {
+        match self.sort_by.as_deref() {
+            Some("volume") => "total_volume",
+            Some("fees") => "total_fees",
+            Some("count") => "total_count",
+            Some("timestamp") => "start_time",
+            _ => "start_time",
+        }
+    }
+
+    pub fn parse_date_range(&self) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
+        parse_date_range(&self.date_range)
+    }
+}
+
+impl RunepoolUnitsHistoryQueryParams {
+    pub fn get_sort_field(&self) -> &str {
+        match self.sort_by.as_deref() {
+            Some("units") => "units",
+            Some("count") => "count",
+            Some("timestamp") => "start_time",
+            _ => "start_time",
+        }
+    }
+
+    pub fn parse_date_range(&self) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
+        parse_date_range(&self.date_range)
+    }
+}
+
+fn parse_date_range(date_range: &Option<String>) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
+    date_range.as_ref().and_then(|range| {
+        let parts: Vec<&str> = range.split(',').collect();
+        if parts.len() == 2 {
+            let start = NaiveDateTime::parse_from_str(
+                &format!("{} 00:00:00", parts[0]),
+                "%Y-%m-%d %H:%M:%S",
+            )
+            .ok()?;
+            let end = NaiveDateTime::parse_from_str(
+                &format!("{} 23:59:59", parts[1]),
+                "%Y-%m-%d %H:%M:%S",
+            )
+            .ok()?;
+            Some((
+                DateTime::from_naive_utc_and_offset(start, Utc),
+                DateTime::from_naive_utc_and_offset(end, Utc),
+            ))
+        } else {
+            None
+        }
+    })
 }

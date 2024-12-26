@@ -1,4 +1,4 @@
-use crate::model::common::Interval;
+use crate::{get_midgard_api_url, model::common::Interval};
 use chrono::{DateTime, Duration, Utc};
 use sqlx::MySqlPool;
 use tokio::time;
@@ -49,8 +49,8 @@ impl DepthHistoryCron {
                 to: None,
             };
 
-            let mut url =
-                reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/depths/ETH.ETH")?;
+            let base_url = get_midgard_api_url();
+            let mut url = reqwest::Url::parse(&format!("{}/history/depths/ETH.ETH", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()

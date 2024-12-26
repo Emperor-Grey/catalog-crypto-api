@@ -2,6 +2,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use prkorm::Table;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::ToSchema;
 
 use super::common::Interval;
 
@@ -74,7 +75,7 @@ mod u64_serialization {
     }
 }
 
-#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 #[table_name("`swap_intervals`")]
 #[serde(rename_all = "camelCase")]
 pub struct SwapInterval {
@@ -156,17 +157,28 @@ pub struct SwapInterval {
     pub total_volume_usd: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SwapHistoryResponse {
     pub intervals: Vec<SwapInterval>,
     #[serde(rename = "meta")]
     pub meta_stats: SwapInterval,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SwapHistoryParams {
     pub interval: Option<Interval>,
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SwapHistoryQueryParams {
+    pub date_range: Option<String>,
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
+    pub sort_by: Option<String>,
+    pub order: Option<String>,
+    pub volume_gt: Option<u64>,
+    pub fees_gt: Option<u64>,
 }

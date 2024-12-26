@@ -1,15 +1,34 @@
 use crate::model::{
-    common::{DepthHistoryQueryParams, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE},
-    depth_history::DepthInterval,
+    common::{DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE},
+    depth_history::{DepthHistoryQueryParams, DepthInterval},
 };
 use axum::{
     extract::{Query, State},
     response::IntoResponse,
     Json,
 };
+use serde_json::json;
 use sqlx::MySqlPool;
 use tracing::{debug, error, info};
 
+#[utoipa::path(
+    get,
+    path = "/depth_history",
+    operation_id = "get_depth_history",
+    tag = "depth",
+    params(
+        ("date_range" = Option<String>, Query, description = "Date range in format YYYY-MM-DD,YYYY-MM-DD"),
+        ("liquidity_gt" = Option<u64>, Query, description = "Filter by minimum liquidity"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("order" = Option<String>, Query, description = "Sort order (asc/desc)"),
+        ("page" = Option<u32>, Query, description = "Page number"),
+        ("limit" = Option<u32>, Query, description = "Items per page")
+    ),
+    responses(
+        (status = 200, description = "List of depth history intervals", body = Vec<DepthInterval>),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_depth_history(
     State(pool): State<MySqlPool>,
     Query(params): Query<DepthHistoryQueryParams>,
@@ -40,12 +59,12 @@ pub async fn get_depth_history(
         query.push_bind(min_liquidity);
     }
 
-    // Handle interval
-    if let Some(interval) = &params.interval {
-        debug!("Interval filter: {}", interval);
-        query.push(" AND interval = ");
-        query.push_bind(interval.to_string());
-    }
+    // TODO // Handle interval next time if you can
+    // if let Some(interval) = &params.interval {
+    //     debug!("Interval filter: {}", interval);
+    //     query.push(" AND `interval` = ");
+    //     query.push_bind(interval.to_string());
+    // }
 
     // Handle sorting
     let sort_field = params.get_sort_field();
@@ -79,13 +98,25 @@ pub async fn get_depth_history(
     {
         Ok(intervals) => {
             info!("Successfully retrieved {} depth intervals", intervals.len());
+
+            if intervals.is_empty() {
+                return Json(json!({
+                    "success": true,
+                    "data": "no data found in the database for the given params"
+                }))
+                .into_response();
+            }
+
             Json(intervals).into_response()
         }
         Err(e) => {
             error!("Database error when fetching depth intervals: {}", e);
             (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Database error: {}", e),
+                Json(json!({
+                    "success": false,
+                    "error": format!("Database error: {}", e)
+                })),
             )
                 .into_response()
         }

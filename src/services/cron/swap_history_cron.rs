@@ -4,6 +4,7 @@ use tokio::time;
 use tracing::{error, info};
 
 use crate::{
+    get_midgard_api_url,
     model::{
         common::Interval,
         swap_history::{SwapHistoryParams, SwapHistoryResponse},
@@ -51,7 +52,8 @@ impl SwapHistoryCron {
                 to: None,
             };
 
-            let mut url = reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/swaps")?;
+            let base_url = get_midgard_api_url();
+            let mut url = reqwest::Url::parse(&format!("{}/history/swaps", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()

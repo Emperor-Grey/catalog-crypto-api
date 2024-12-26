@@ -2,6 +2,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use prkorm::Table;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::ToSchema;
 
 use super::common::Interval;
 
@@ -84,7 +85,7 @@ mod u64_serialization {
     }
 }
 
-#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 #[table_name("`earning_pool`")]
 pub struct Pool {
     #[serde(rename = "assetLiquidityFees", with = "u64_serialization")]
@@ -102,7 +103,7 @@ pub struct Pool {
     pub total_liquidity_fees_rune: u64,
 }
 
-#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 #[table_name("`earning_intervals`")]
 #[serde(rename_all = "camelCase")]
 #[derive(sqlx::Type)]
@@ -129,7 +130,7 @@ pub struct IntervalData {
     pub start_time: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MetaStats {
     #[serde(rename = "avgNodeCount", with = "float_serialization")]
     pub avg_node_count: f64,
@@ -149,17 +150,30 @@ pub struct MetaStats {
     pub pools: Vec<Pool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct EarningsHistoryResponse {
     pub intervals: Vec<IntervalData>,
     #[serde(rename = "meta")]
     pub meta_stats: MetaStats,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct EarningsHistoryParams {
     pub interval: Option<Interval>,
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct EarningsHistoryQueryParams {
+    pub date_range: Option<String>,
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
+    pub sort_by: Option<String>,
+    pub order: Option<String>,
+    pub earnings_gt: Option<u64>,
+    pub block_rewards_gt: Option<u64>,
+    pub node_count_gt: Option<f64>,
+    pub pool: Option<String>,
 }

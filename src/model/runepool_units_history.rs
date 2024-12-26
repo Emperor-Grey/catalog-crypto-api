@@ -2,6 +2,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use prkorm::Table;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::ToSchema;
 
 use super::common::Interval;
 
@@ -51,7 +52,7 @@ mod u64_serialization {
     }
 }
 
-#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Table, Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 #[table_name("`runepool_unit_intervals`")]
 pub struct RunepoolUnitsInterval {
     #[serde(rename = "count", with = "u64_serialization")]
@@ -64,7 +65,7 @@ pub struct RunepoolUnitsInterval {
     pub units: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MetaStats {
     #[serde(rename = "endCount", with = "u64_serialization")]
     pub end_count: u64,
@@ -80,17 +81,27 @@ pub struct MetaStats {
     pub start_units: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RunepoolUnitsHistoryResponse {
     pub intervals: Vec<RunepoolUnitsInterval>,
     #[serde(rename = "meta")]
     pub meta_stats: MetaStats,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RunepoolUnitsHistoryParams {
     pub interval: Option<Interval>,
     pub count: Option<u32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct RunepoolUnitsHistoryQueryParams {
+    pub date_range: Option<String>,
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
+    pub sort_by: Option<String>,
+    pub order: Option<String>,
+    pub units_gt: Option<u64>,
 }

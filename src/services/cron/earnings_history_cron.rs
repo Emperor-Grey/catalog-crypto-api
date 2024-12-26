@@ -1,3 +1,4 @@
+use crate::get_midgard_api_url;
 use crate::model::common::Interval;
 use crate::{
     model::earnings_history::{EarningsHistoryParams, EarningsHistoryResponse},
@@ -48,8 +49,8 @@ impl EarningsHistoryCron {
                 to: None,
             };
 
-            let mut url =
-                reqwest::Url::parse("https://midgard.ninerealms.com/v2/history/earnings")?;
+            let base_url = get_midgard_api_url();
+            let mut url = reqwest::Url::parse(&format!("{}/history/earnings", base_url))?;
 
             if let Some(interval) = &params.interval {
                 url.query_pairs_mut()
