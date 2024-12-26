@@ -98,13 +98,12 @@ async fn start_server(pool: sqlx::MySqlPool) {
             Method::POST,
             Method::DELETE,
         ]))
-        .route("/", get(root))
         .route("/depth_history", get(get_depth_history))
         .route("/earning_history", get(get_earnings_history))
         .route("/swap_history", get(get_swap_history))
         .route("/runepool_units_history", get(get_runepool_units_history))
         .with_state(pool)
-        .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", SwaggerApiDoc::openapi()));
+        .merge(SwaggerUi::new("/").url("/api-docs/openapi.json", SwaggerApiDoc::openapi()));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = TcpListener::bind(addr).await.unwrap();
@@ -117,8 +116,4 @@ async fn start_server(pool: sqlx::MySqlPool) {
     )
     .await
     .unwrap();
-}
-
-async fn root() -> &'static str {
-    "Hello, World!"
 }
