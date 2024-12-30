@@ -27,7 +27,7 @@ use tracing::{debug, error, info};
         ("limit" = Option<u32>, Query, description = "Items per page. Default is `100`")
     ),
     responses(
-        (status = 200, description = "List of runepool units history intervals", body = Vec<RunepoolUnitsInterval>),
+        (status = 200, description = "List of runepool units history intervals", body = RunepoolUnitsHistoryResponse),
         (status = 500, description = "Internal server error")
     )
 )]

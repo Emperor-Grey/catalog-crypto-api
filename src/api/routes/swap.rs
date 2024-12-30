@@ -28,7 +28,7 @@ use tracing::{debug, error, info};
         ("fees_gt" = Option<u64>, Query, description = "Filter by minimum fees. Default is `0`")
     ),
     responses(
-        (status = 200, description = "List of swap history intervals", body = Vec<SwapInterval>),
+        (status = 200, description = "List of swap history intervals", body = SwapHistoryResponse),
         (status = 500, description = "Internal server error")
     )
 )]
